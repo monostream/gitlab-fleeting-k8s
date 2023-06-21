@@ -1,0 +1,67 @@
+docker:
+  persistence:
+    size: 50Gi
+fullnameOverride: docker-runner-autoscaler
+podLabels:
+  app.kubernetes.io/instance: docker-runner-autoscaler
+  app.kubernetes.io/name: docker-runner-autoscaler
+replicas: 0
+resources:
+  requests:
+    cpu: 200m
+    memory: 512Mi
+runnerRegistrationToken: xxx
+runners:
+  concurrent: 10
+  config: |
+    [[runners]]
+      url = "https://gitlab.tribbles.cloud"
+      builds_dir = "/builds"
+      environment = ["DOCKER_HOST=tcp://localhost:2376", "DOCKER_TLS_VERIFY=1", "DOCKER_TLS_CERTDIR=/certs", "DOCKER_CERT_PATH=/certs/client", "DOCKER_DRIVER=overlay2"]
+      [runners.docker]
+        tls_verify = true
+        network_mode = "host"
+        image = "ubuntu:20.04"
+        privileged = true
+        disable_entrypoint_overwrite = false
+        oom_kill_disable = false
+        disable_cache = false
+        volumes = [
+          "/home/gitlab-runner/cache:/cache",
+          "/home/gitlab-runner/builds:/builds",
+          "/var/lib/docker:/var/lib/docker:ro",
+          "/certs/client:/certs/client:ro"
+        ]
+        shm_size = 0
+        allowed_pull_policies = ["always", "if-not-present", "never"]
+        pull_policy = ["always", "if-not-present"]
+      [runners.autoscaler]
+        plugin = "fleeting-plugin-k8s"
+        
+        capacity_per_instance = 1
+        max_use_count = 100
+        max_instances = 1
+      
+      [runners.autoscaler.plugin_config]
+        name               = "docker-runner-autoscaler"
+        namespace          = "gitlab"
+      
+      [runners.autoscaler.connector_config]
+        os = "linux"
+        arch = "amd64"
+        protocol = "ssh"
+        username = "root"
+        password = "blub"
+        use_static_credentials = true
+        use_external_addr = false
+        keepalive = "60s"
+        timeout = "5m"
+      
+      [[runners.autoscaler.policy]]
+        idle_count = 0
+        idle_time = "20m0s"
+        scale_factor = 0.0
+        scale_factor_limit = 0
+
+  runUntagged: true
+  tags: docker,docker-runner-autoscaler

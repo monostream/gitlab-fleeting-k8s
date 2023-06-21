@@ -1,0 +1,69 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ include "gitlab-runner-docker-autoscaler.fullname" . }}
+  namespace: {{ default .Release.Namespace .Values.namespace | quote }}
+  labels:
+    app: {{ include "gitlab-runner-docker-autoscaler.fullname" . }}
+    chart: {{ include "gitlab-runner-docker-autoscaler.chart" . }}
+    release: "{{ .Release.Name }}"
+    heritage: "{{ .Release.Service }}"
+data:
+  entrypoint: |
+    #!/bin/bash
+    set -e
+
+    # Register the runner
+    if ! sh /configmaps/register-the-runner; then
+      exit 1
+    fi
+
+    # Start the runner
+    exec /entrypoint run --user=gitlab-runner \
+      --working-directory=/home/gitlab-runner
+  entrypoint-agent: |
+    #!/bin/bash
+    set -e
+
+    mkdir -p /home/gitlab-runner/.gitlab-runner/
+    mkdir -p /home/gitlab-runner/builds/
+    mkdir -p /home/gitlab-runner/cache/
+
+    # Start the runner
+    exec /entrypoint run --user=gitlab-runner \
+      --working-directory=/home/gitlab-runner
+  {{ if .Values.runners.config }}
+  config.template.toml: {{ tpl (toYaml .Values.runners.config) $ | indent 2 }}
+  {{ end }}
+  register-the-runner: |
+    #!/bin/bash
+
+    if [ -f /home/gitlab-runner/.gitlab-runner/config.toml ]; then
+      echo "Runner already registered, skipping"
+      exit 0
+    fi
+
+    mkdir -p /home/gitlab-runner/.gitlab-runner/
+    mkdir -p /home/gitlab-runner/builds/
+    mkdir -p /home/gitlab-runner/cache/
+
+    echo "concurrent = {{ .Values.runners.concurrent -}}\nlog_level = \"debug\"\n" > /home/gitlab-runner/.gitlab-runner/config.toml
+
+    /entrypoint register \
+      --name=$(hostname) \
+      --registration-token=$(cat /secrets/runner-registration-token) \
+      --executor "docker-autoscaler" \
+      --docker-image ubuntu:20.04 \
+      {{- if and (hasKey .Values.runners "runUntagged") .Values.runners.runUntagged }}
+      --run-untagged=true \
+      {{- end }}
+      {{- if and (hasKey .Values.runners "protected") .Values.runners.protected }}
+      --access-level="ref_protected" \
+      {{- end }}
+      {{- if and (hasKey .Values.runners "tags") .Values.runners.tags }}
+      --tag-list={{ .Values.runners.tags | quote -}} \
+      {{- end }}
+      {{- if .Values.runners.config }}
+      --template-config /configmaps/config.template.toml \
+      {{- end }}
+      --non-interactive

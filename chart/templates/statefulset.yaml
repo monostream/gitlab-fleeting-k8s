@@ -1,0 +1,130 @@
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: {{ include "gitlab-runner-docker-autoscaler.fullname" . }}
+  labels:
+    {{- include "gitlab-runner-docker-autoscaler.labels" . | nindent 4 }}
+spec:
+  serviceName: gitlab-runner-docker-autoscaler
+  replicas: {{ default 0 .Values.replicas }}
+  podManagementPolicy: Parallel
+  selector:
+    matchLabels:
+      {{- include "gitlab-runner-docker-autoscaler.selectorLabels" . | nindent 6 }}
+  template:
+    metadata:
+      labels:
+        {{- include "gitlab-runner-docker-autoscaler.selectorLabels" . | nindent 8 }}
+    spec:
+      serviceAccountName: {{ include "gitlab-runner-docker-autoscaler.serviceAccountName" . }}
+      containers:
+        - name: gitlab-runner-agent
+          image: "{{ .Values.agent.repository }}:{{ .Values.agent.tag }}"
+          imagePullPolicy: {{ .Values.agent.pullPolicy }}
+          ports:
+            - name: ssh
+              containerPort: 22
+              protocol: TCP
+          volumeMounts:
+            - name: data
+              mountPath: /home/gitlab-runner
+              subPath: gitlab-runner
+            - name: configmaps
+              mountPath: /configmaps
+            - name: runtime
+              mountPath: /run/user/0
+            - name: projected-secrets
+              mountPath: /secrets
+            - name: certs
+              mountPath: /certs
+          resources:
+            {{- toYaml .Values.resources | nindent 12 }}
+        - name: agent-docker
+          securityContext:
+            privileged: true
+          image: "{{ .Values.docker.repository }}:{{ .Values.docker.tag }}"
+          imagePullPolicy: {{ .Values.docker.pullPolicy }}
+          args:
+            - "--group"
+            - "0"
+            - "--host"
+            - "unix:///run/user/0/docker.sock"
+            - "--mtu"
+            - "1440"
+          ports:
+            - name: docker
+              containerPort: 2376
+              protocol: TCP
+          volumeMounts:
+            - name: data
+              mountPath: /home/gitlab-runner
+              subPath: gitlab-runner
+            - name: runtime
+              mountPath: /run/user/0
+            - name: data
+              mountPath: /var/lib/docker
+              subPath: docker
+            - name: projected-secrets
+              mountPath: /secrets
+            - name: modules
+              mountPath: /lib/modules
+              readOnly: true
+            - name: certs
+              mountPath: /certs
+          resources:
+            {{- toYaml .Values.docker.resources | nindent 12 }}
+      initContainers:
+        - name: init-volume
+          image: "{{ .Values.initVolume.repository }}:{{ .Values.initVolume.tag }}"
+          imagePullPolicy: {{ .Values.initVolume.pullPolicy }}
+          command: [ 'sh', '-c', 'mkdir -p /mnt/data/gitlab-runner /mnt/data/docker && chown 0:0 /mnt/data/gitlab-runner' ]
+          volumeMounts:
+            - name: data
+              mountPath: /mnt/data
+      {{- with .Values.nodeSelector }}
+      nodeSelector:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.affinity }}
+      affinity:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.tolerations }}
+      tolerations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      volumes:
+        - name: runtime
+          emptyDir: {}
+        - name: configmaps
+          configMap:
+            name: {{ include "gitlab-runner-docker-autoscaler.fullname" . }}
+        - name: modules
+          hostPath:
+            path: /lib/modules
+        - name: certs
+          emptyDir: {}
+        - name: projected-secrets
+          projected:
+            sources:
+              - secret:
+                  name: {{ include "gitlab-runner-docker-autoscaler.secret" . }}
+                  items:
+                    - key: runner-registration-token
+                      path: runner-registration-token
+  volumeClaimTemplates:
+    - metadata:
+        name: data
+      spec:
+        accessModes:
+          - {{ .Values.docker.persistence.accessMode | quote }}
+        resources:
+          requests:
+            storage: {{ .Values.docker.persistence.size | quote }}
+        {{- if .Values.docker.persistence.storageClass }}
+        {{- if (eq "-" .Values.docker.persistence.storageClass) }}
+        storageClassName: ""
+        {{- else }}
+        storageClassName: "{{ .Values.docker.persistence.storageClass }}"
+        {{- end }}
+        {{- end }}

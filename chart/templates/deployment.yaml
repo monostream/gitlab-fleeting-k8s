@@ -1,0 +1,67 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "gitlab-runner-docker-autoscaler.fullname" . }}
+  labels:
+    {{- include "gitlab-runner-docker-autoscaler.labels" . | nindent 4 }}
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      {{- include "gitlab-runner-docker-autoscaler.selectorLabels" . | nindent 6 }}
+  template:
+    metadata:
+      labels:
+        {{- include "gitlab-runner-docker-autoscaler.selectorLabels" . | nindent 8 }}
+    spec:
+      serviceAccountName: {{ include "gitlab-runner-docker-autoscaler.serviceAccountName" . }}
+      containers:
+        - name: gitlab-runner
+          securityContext:
+            runAsNonRoot: true
+            runAsUser: 999
+          image: "{{ .Values.image.repository }}:{{ .Values.image.tag }}"
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          command: ["/usr/bin/dumb-init", "--", "/bin/bash", "/configmaps/entrypoint"]
+          volumeMounts:
+            - name: configmaps
+              mountPath: /configmaps
+            - name: runtime
+              mountPath: /run/user/999
+            - name: projected-secrets
+              mountPath: /secrets
+            - name: certs
+              mountPath: /certs
+          resources:
+            {{- toYaml .Values.resources | nindent 12 }}
+      {{- with .Values.nodeSelector }}
+      nodeSelector:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.affinity }}
+      affinity:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.tolerations }}
+      tolerations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      volumes:
+        - name: runtime
+          emptyDir: {}
+        - name: configmaps
+          configMap:
+            name: {{ include "gitlab-runner-docker-autoscaler.fullname" . }}
+        - name: modules
+          hostPath:
+            path: /lib/modules
+        - name: certs
+          emptyDir: {}
+        - name: projected-secrets
+          projected:
+            sources:
+              - secret:
+                  name: {{ include "gitlab-runner-docker-autoscaler.secret" . }}
+                  items:
+                    - key: runner-registration-token
+                      path: runner-registration-token

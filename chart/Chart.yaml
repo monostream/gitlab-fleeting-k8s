@@ -1,0 +1,8 @@
+apiVersion: v2
+type: application
+
+name: gitlab-runner-docker-autoscaler
+description: GitLab Runner in Docker autoscaler mode
+
+version: 23.5.1
+appVersion: 16.0.0

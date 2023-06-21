@@ -1,0 +1,86 @@
+fullnameOverride:
+
+image:
+  repository: monostream/gitlab-runner-docker-autoscaler
+  tag: 0.0.1
+  pullPolicy: Always
+
+replicas: 0
+
+podLabels:
+  app.kubernetes.io/instance:
+  app.kubernetes.io/name:
+
+rbac:
+  podSecurityPolicy:
+    enabled: false
+  clusterWideAccess: true
+  create: true
+  rules:
+  - apiGroups:
+    - '*'
+    resources:
+    - '*'
+    verbs:
+    - '*'
+
+serviceAccount:
+  create: true
+
+metrics:
+  enabled: true
+  portName: metrics
+  port: 9252
+  serviceMonitor:
+    enabled: true
+
+runnerRegistrationToken:
+
+runners:
+  config:
+  tags:
+  runUntagged:
+  protected:
+  concurrent:
+
+resources:
+  requests:
+    cpu: 100m
+    memory: 128Mi
+
+#persistence:
+#  enabled: true
+#  # storageClass: "-"
+#  accessMode: ReadWriteOnce
+#  size: 50Gi
+#  annotations: {}
+
+initVolume:
+  repository: busybox
+  pullPolicy: Always
+  tag: stable
+
+docker:
+  repository: docker
+  pullPolicy: Always
+  tag: 23.0.1-dind
+
+  persistence:
+    # storageClass: "-"
+    accessMode: ReadWriteOnce
+    size: 50Gi
+    annotations: { }
+
+  resources:
+    limits:
+      #cpu: 100m
+      memory: 12Gi
+    requests:
+      #cpu: 100m
+      memory: 1Gi
+
+agent:
+  repository: monostream/gitlab-runner-docker-autoscaler-agent
+  pullPolicy: Always
+  tag: 0.0.1
+
