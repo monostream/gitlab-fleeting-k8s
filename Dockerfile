@@ -11,7 +11,7 @@ ENV CGO_ENABLED=0
 RUN go mod download
 RUN go build
 
-FROM gitlab/gitlab-runner:v16.1.0
+FROM gitlab/gitlab-runner:ubuntu-v16.1.0
 
 ENV XDG_RUNTIME_DIR /run/user/999
 
