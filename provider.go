@@ -72,7 +72,7 @@ func (g *InstanceGroup) Init(ctx context.Context, logger hclog.Logger, settings 
 func (g *InstanceGroup) ConnectInfo(ctx context.Context, id string) (provider.ConnectInfo, error) {
 	info := provider.ConnectInfo{
 		ConnectorConfig: g.settings.ConnectorConfig,
-		ID: id,
+		ID:              id,
 	}
 
 	namespace, name, ok := podNameFromID(id)
@@ -227,6 +227,10 @@ func (g *InstanceGroup) Increase(ctx context.Context, delta int) (int, error) {
 
 // Update implements provider.InstanceGroup
 func (g *InstanceGroup) Update(ctx context.Context, update func(instance string, state provider.State)) error {
+	if update == nil {
+		return nil
+	}
+
 	pods, err := g.client.StatefulSetPods(ctx, g.Namespace, g.Name)
 
 	if err != nil {
