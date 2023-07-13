@@ -72,6 +72,7 @@ func (g *InstanceGroup) Init(ctx context.Context, logger hclog.Logger, settings 
 func (g *InstanceGroup) ConnectInfo(ctx context.Context, id string) (provider.ConnectInfo, error) {
 	info := provider.ConnectInfo{
 		ConnectorConfig: g.settings.ConnectorConfig,
+		ID: id,
 	}
 
 	namespace, name, ok := podNameFromID(id)
