@@ -51,17 +51,15 @@ runners:
         arch = "amd64"
         protocol = "ssh"
         username = "root"
-        password = "blub"
         use_static_credentials = true
+        key_path = "/home/gitlab-runner/.ssh/id_rsa"
         use_external_addr = false
         keepalive = "60s"
         timeout = "5m"
       
       [[runners.autoscaler.policy]]
-        idle_count = 0
-        idle_time = "20m0s"
-        scale_factor = 0.0
-        scale_factor_limit = 0
+        idle_count = 1
+        idle_time = "5m0s"
 
   runUntagged: true
   tags: docker,docker-runner-autoscaler

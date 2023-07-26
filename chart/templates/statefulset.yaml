@@ -37,6 +37,9 @@ spec:
               mountPath: /secrets
             - name: certs
               mountPath: /certs
+            - name: ssh-keys
+              readOnly: true
+              mountPath: /ssh-keys
           resources:
             {{- toYaml .Values.resources | nindent 12 }}
         - name: agent-docker
@@ -77,10 +80,13 @@ spec:
         - name: init-volume
           image: "{{ .Values.initVolume.repository }}:{{ .Values.initVolume.tag }}"
           imagePullPolicy: {{ .Values.initVolume.pullPolicy }}
-          command: [ 'sh', '-c', 'mkdir -p /mnt/data/gitlab-runner /mnt/data/docker && chown 0:0 /mnt/data/gitlab-runner' ]
+          command: [ 'sh', '-c', 'mkdir -p /mnt/data/gitlab-runner/.ssh /mnt/data/docker && chown 0:0 /mnt/data/gitlab-runner', 'cp -L -R /ssh-keys/* /mnt/data/gitlab-runner/.ssh && chown -R 999:999 /mnt/data/gitlab-runner/.ssh' ]
           volumeMounts:
             - name: data
               mountPath: /mnt/data
+            - name: ssh-keys
+              readOnly: true
+              mountPath: /ssh-keys
       {{- with .Values.nodeSelector }}
       nodeSelector:
         {{- toYaml . | nindent 8 }}
@@ -104,6 +110,10 @@ spec:
             path: /lib/modules
         - name: certs
           emptyDir: {}
+        - name: ssh-keys
+          secret:
+            secretName: agent-ssh
+            defaultMode: 0600
         - name: projected-secrets
           projected:
             sources:

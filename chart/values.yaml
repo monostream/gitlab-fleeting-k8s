@@ -2,7 +2,7 @@ fullnameOverride:
 
 image:
   repository: monostream/gitlab-runner-docker-autoscaler
-  tag: 0.0.1
+  tag: 0.0.2
   pullPolicy: Always
 
 replicas: 0
@@ -82,5 +82,5 @@ docker:
 agent:
   repository: monostream/gitlab-runner-docker-autoscaler-agent
   pullPolicy: Always
-  tag: 0.0.1
+  tag: 0.0.2
 

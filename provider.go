@@ -105,10 +105,10 @@ func (g *InstanceGroup) ConnectInfo(ctx context.Context, id string) (provider.Co
 		info.Username = "root"
 	}
 
-	if info.Password == "" {
-		info.Password = "blub"
-		//info.Password = deref(instance.Properties.OSProfile.AdminPassword)
-	}
+	//if info.Password == "" {
+	//info.Password = "blub"
+	//info.Password = deref(instance.Properties.OSProfile.AdminPassword)
+	//}
 
 	if info.Protocol == "" {
 		info.Protocol = provider.ProtocolSSH
@@ -118,7 +118,7 @@ func (g *InstanceGroup) ConnectInfo(ctx context.Context, id string) (provider.Co
 	}
 
 	info.InternalAddr = pod.Status.PodIP
-	info.ExternalAddr = pod.Status.PodIP
+	//info.ExternalAddr = pod.Status.PodIP
 	info.UseStaticCredentials = true
 
 	if info.Keepalive == 0 {
@@ -129,7 +129,7 @@ func (g *InstanceGroup) ConnectInfo(ctx context.Context, id string) (provider.Co
 		info.Timeout = time.Minute * 5
 	}
 
-	expires := time.Now().Add(2 * time.Minute)
+	expires := time.Now().Add(5 * time.Minute)
 	info.Expires = &expires
 
 	//if err := g.populateNetwork(ctx, &info, instance.VirtualMachineScaleSetVM); err != nil {
