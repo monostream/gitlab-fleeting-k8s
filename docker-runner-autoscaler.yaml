@@ -18,6 +18,8 @@ runners:
       url = "https://gitlab.tribbles.cloud"
       builds_dir = "/builds"
       environment = ["DOCKER_HOST=tcp://localhost:2376", "DOCKER_TLS_VERIFY=1", "DOCKER_TLS_CERTDIR=/certs", "DOCKER_CERT_PATH=/certs/client", "DOCKER_DRIVER=overlay2"]
+      executor = "docker-autoscaler"
+      shell = "sh"
       [runners.docker]
         tls_verify = true
         network_mode = "host"
@@ -58,7 +60,7 @@ runners:
         timeout = "5m"
       
       [[runners.autoscaler.policy]]
-        idle_count = 1
+        idle_count = 0
         idle_time = "5m0s"
 
   runUntagged: true
